@@ -11,25 +11,25 @@ const Person = require('./models/person')
 
 const app = express()
 
-// 🔥 Conexión a MongoDB
+// Conexión a MongoDB
 mongoose.set('strictQuery', false)
 
 mongoose.connect(URL)
   .then(() => {
-    console.log('✅ Connected to MongoDB')
-    console.log(`📡 Server will run on port ${PORT}`)
+    console.log('✅ Conectado a MongoDB')
+    console.log(`📡 Servidor corriendo en el puerto ${PORT}`)
   })
   .catch(err => {
-    console.error('❌ MongoDB connection error:', err.message)
+    console.error('❌ Error de conexión a MongoDB:', err.message)
     process.exit(1)
   })
 
-// ================= MIDDLEWARES =================
+// Middlewares
 app.use(cors())
 app.use(express.json())
 app.use(express.static('dist'))
 
-// Morgan con logging de body solo para POST y PUT
+// Morgan con logging de body
 morgan.token('body', (req) => {
   if (req.method === 'POST' || req.method === 'PUT') {
     return JSON.stringify(req.body)
@@ -38,9 +38,9 @@ morgan.token('body', (req) => {
 })
 app.use(morgan(':method :url :status :res[content-length] - :response-time ms :body'))
 
-// ================= ROUTES =================
+// ================= RUTAS =================
 
-// GET ALL - Obtener todas las personas
+// OBTENER TODOS
 app.get('/api/persons', async (req, res, next) => {
   try {
     const persons = await Person.find({}).sort({ name: 1 })
@@ -50,109 +50,89 @@ app.get('/api/persons', async (req, res, next) => {
   }
 })
 
-// GET BY ID - Obtener una persona específica
+// OBTENER POR ID
 app.get('/api/persons/:id', async (req, res, next) => {
   try {
     const person = await Person.findById(req.params.id)
     if (person) {
       res.json(person)
     } else {
-      res.status(404).json({ error: 'Person not found' })
+      res.status(404).json({ error: 'Persona no encontrada' })
     }
   } catch (error) {
     next(error)
   }
 })
 
-// POST - Crear una nueva persona
+// CREAR NUEVA PERSONA
 app.post('/api/persons', async (req, res, next) => {
   try {
     let { name, number, countryCode } = req.body
 
-    // Validación básica
     if (!name || !number) {
       return res.status(400).json({ 
-        error: 'Both name and number are required' 
+        error: 'El nombre y el número de teléfono son obligatorios' 
       })
     }
 
-    // Limpiar el número para la validación
-    let cleanNumber = number.replace(/[\s-]/g, '')
-    
-    // Si el número no tiene prefijo y no se proporcionó countryCode, usar +34 por defecto
-    if (!cleanNumber.startsWith('+')) {
-      if (!countryCode) {
-        countryCode = '+34'
-      }
-      // Extraer solo los dígitos del número sin prefijo
-      const digitsOnly = cleanNumber.replace(/\D/g, '')
-      if (digitsOnly.length === 9) {
-        number = countryCode + digitsOnly
-      }
+    // Verificar formato del número
+    const phonePattern = /^\+\d{2}\s\d{3}\s\d{3}\s\d{3}$/
+    if (!phonePattern.test(number)) {
+      return res.status(400).json({ 
+        error: 'Formato de teléfono inválido',
+        message: 'Usa el formato: +34 654 827 120'
+      })
     }
 
-    // Verificar si ya existe una persona con el mismo nombre (case-insensitive)
+    // Verificar si ya existe una persona con el mismo nombre
     const existingPerson = await Person.findOne({ 
       name: { $regex: new RegExp(`^${name}$`, 'i') } 
     })
     
     if (existingPerson) {
       return res.status(400).json({ 
-        error: `Person with name "${name}" already exists`,
-        existingId: existingPerson.id
+        error: `Ya existe una persona con el nombre "${name}" en la agenda`
       })
     }
 
-    // Crear nueva persona
-    const personData = { 
+    const person = new Person({ 
       name: name.trim(), 
       number,
-      countryCode: countryCode || '+34'
-    }
-    
-    const person = new Person(personData)
-    const savedPerson = await person.save()
-    
-    // Devolver también la versión formateada del número
-    res.status(201).json({
-      ...savedPerson.toJSON(),
-      originalNumber: number
+      countryCode: countryCode || number.substring(0, 3)
     })
     
+    const savedPerson = await person.save()
+    res.status(201).json(savedPerson)
+    
   } catch (error) {
-    // Manejar errores de validación de Mongoose
     if (error.name === 'ValidationError') {
       return res.status(400).json({ 
-        error: 'Validation Error',
-        details: error.message,
-        fields: Object.keys(error.errors)
+        error: 'Error de validación',
+        details: error.message
       })
     }
     next(error)
   }
 })
 
-// PUT - Actualizar una persona completa
+// ACTUALIZAR PERSONA COMPLETA
 app.put('/api/persons/:id', async (req, res, next) => {
   try {
     let { name, number, countryCode } = req.body
 
     if (!name || !number) {
       return res.status(400).json({ 
-        error: 'Both name and number are required' 
+        error: 'El nombre y el número de teléfono son obligatorios' 
       })
     }
 
-    // Limpiar el número para la validación
-    let cleanNumber = number.replace(/[\s-]/g, '')
-    
-    // Si el número no tiene prefijo, añadir countryCode o +34 por defecto
-    if (!cleanNumber.startsWith('+')) {
-      const code = countryCode || '+34'
-      const digitsOnly = cleanNumber.replace(/\D/g, '')
-      if (digitsOnly.length === 9) {
-        number = code + digitsOnly
-      }
+    // Verificar formato del número
+    const phonePattern = /^\+\d{2}\s\d{3}\s\d{3}\s\d{3}$/
+    if (!phonePattern.test(number)) {
+      return res.status(400).json({ 
+        error: 'Formato de teléfono inválido',
+        message: 'Usa el formato: +34 654 827 120'
+      })
     }
 
     // Verificar si el nuevo nombre ya existe en otra persona
@@ -163,17 +143,16 @@ app.put('/api/persons/:id', async (req, res, next) => {
     
     if (existingPerson) {
       return res.status(400).json({ 
-        error: `Person with name "${name}" already exists`,
-        existingId: existingPerson.id
+        error: `Ya existe una persona con el nombre "${name}" en la agenda`
       })
     }
 
     const updatedPerson = await Person.findByIdAndUpdate(
       req.params.id,
-      { name: name.trim(), number, countryCode: countryCode || '+34' },
+      { name: name.trim(), number, countryCode: countryCode || number.substring(0, 3) },
       { 
-        new: true,           // Devuelve el documento actualizado
-        runValidators: true, // Ejecuta las validaciones del schema
+        new: true,
+        runValidators: true,
         context: 'query'
       }
     )
@@ -181,41 +160,34 @@ app.put('/api/persons/:id', async (req, res, next) => {
     if (updatedPerson) {
       res.json(updatedPerson)
     } else {
-      res.status(404).json({ error: 'Person not found' })
+      res.status(404).json({ error: 'Persona no encontrada' })
     }
   } catch (error) {
     if (error.name === 'ValidationError') {
-      return res.status(400).json({ 
-        error: 'Validation Error',
-        details: error.message
-      })
+      return res.status(400).json({ error: error.message })
     }
     next(error)
   }
 })
 
-// PATCH - Actualizar parcialmente (solo el número)
+// ACTUALIZAR PARCIALMENTE (SOLO EL NÚMERO)
 app.patch('/api/persons/:id', async (req, res, next) => {
   try {
     let { number, countryCode } = req.body
 
     if (!number) {
       return res.status(400).json({ 
-        error: 'Number is required for partial update' 
+        error: 'El número de teléfono es obligatorio para la actualización parcial' 
       })
     }
 
-    // Limpiar el número para la validación
-    let cleanNumber = number.replace(/[\s-]/g, '')
-    
-    // Si el número no tiene prefijo, añadir countryCode o usar el existente
-    if (!cleanNumber.startsWith('+')) {
-      const existingPerson = await Person.findById(req.params.id)
-      const code = countryCode || existingPerson?.countryCode || '+34'
-      const digitsOnly = cleanNumber.replace(/\D/g, '')
-      if (digitsOnly.length === 9) {
-        number = code + digitsOnly
-      }
+    // Verificar formato del número
+    const phonePattern = /^\+\d{2}\s\d{3}\s\d{3}\s\d{3}$/
+    if (!phonePattern.test(number)) {
+      return res.status(400).json({ 
+        error: 'Formato de teléfono inválido',
+        message: 'Usa el formato: +34 654 827 120'
+      })
     }
 
     const updatedPerson = await Person.findByIdAndUpdate(
@@ -231,7 +203,7 @@ app.patch('/api/persons/:id', async (req, res, next) => {
     if (updatedPerson) {
       res.json(updatedPerson)
     } else {
-      res.status(404).json({ error: 'Person not found' })
+      res.status(404).json({ error: 'Persona no encontrada' })
     }
   } catch (error) {
     if (error.name === 'ValidationError') {
@@ -241,7 +213,7 @@ app.patch('/api/persons/:id', async (req, res, next) => {
   }
 })
 
-// DELETE - Eliminar una persona
+// ELIMINAR PERSONA
 app.delete('/api/persons/:id', async (req, res, next) => {
   try {
     const deletedPerson = await Person.findByIdAndDelete(req.params.id)
@@ -249,159 +221,51 @@ app.delete('/api/persons/:id', async (req, res, next) => {
     if (deletedPerson) {
       res.status(204).end()
     } else {
-      res.status(404).json({ error: 'Person not found' })
+      res.status(404).json({ error: 'Persona no encontrada' })
     }
   } catch (error) {
     next(error)
   }
 })
 
-// GET INFO - Información de la agenda
+// INFORMACIÓN DE LA AGENDA
 app.get('/info', async (req, res, next) => {
   try {
     const count = await Person.countDocuments({})
-    const persons = await Person.find({}).sort({ name: 1 })
-    const currentDate = new Date()
-    
-    // Generar lista de contactos para mostrar
-    const contactsList = persons.map(p => `
-      <tr>
-        <td>${p.name}</td>
-        <td>${p.formatPhoneNumber()}</td>
-        <td><small>${p.countryCode}</small></td>
-      </tr>
-    `).join('')
-    
     res.send(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Phonebook API - Agenda Telefónica</title>
+          <title>Agenda Telefónica - API</title>
           <style>
-            * {
-              margin: 0;
-              padding: 0;
-              box-sizing: border-box;
-            }
             body {
-              font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-              min-height: 100vh;
+              font-family: system-ui, sans-serif;
+              max-width: 800px;
+              margin: 40px auto;
               padding: 20px;
-            }
-            .container {
-              max-width: 1000px;
-              margin: 0 auto;
+              background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             }
             .card {
-              background: rgba(255, 255, 255, 0.95);
+              background: white;
               border-radius: 20px;
               padding: 30px;
-              margin-bottom: 20px;
               box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-              backdrop-filter: blur(10px);
             }
-            h1 {
-              margin: 0 0 10px 0;
-              color: #667eea;
-              font-size: 2.5em;
-            }
-            .stats {
-              background: linear-gradient(135deg, #667eea 20%, #764ba2 100%);
-              color: white;
-              padding: 20px;
-              border-radius: 15px;
-              margin: 20px 0;
-            }
-            .stat-number {
-              font-size: 2em;
-              font-weight: bold;
-            }
-            .badge {
-              display: inline-block;
-              padding: 5px 12px;
-              border-radius: 20px;
-              font-size: 12px;
-              font-weight: bold;
-            }
-            .online {
-              background: #10b981;
-              color: white;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-top: 20px;
-            }
-            th, td {
-              padding: 12px;
-              text-align: left;
-              border-bottom: 1px solid #e0e0e0;
-            }
-            th {
-              background-color: #f8f9fa;
-              color: #667eea;
-              font-weight: 600;
-            }
-            tr:hover {
-              background-color: #f8f9fa;
-            }
-            .date {
-              font-family: monospace;
-              font-size: 14px;
-              color: #666;
-              margin-top: 15px;
-            }
-            .endpoints {
-              background: #f8f9fa;
-              padding: 15px;
-              border-radius: 10px;
-              font-family: monospace;
-              font-size: 13px;
-            }
-            .endpoints code {
-              background: #e0e0e0;
-              padding: 2px 6px;
-              border-radius: 4px;
-            }
+            h1 { color: #667eea; margin-top: 0; }
+            .info { background: #f0f0f0; padding: 15px; border-radius: 10px; margin: 20px 0; }
+            .badge { display: inline-block; padding: 5px 10px; border-radius: 20px; background: #10b981; color: white; font-size: 12px; }
           </style>
         </head>
         <body>
-          <div class="container">
-            <div class="card">
-              <h1>📞 Phonebook API</h1>
-              <p>Agenda telefónica con soporte para números internacionales</p>
-              
-              <div class="stats">
-                <p><strong>📊 Estadísticas</strong></p>
-                <p><span class="stat-number">${count}</span> contactos en la agenda</p>
-                <p>🟢 Estado: <span class="badge online">Online</span></p>
-              </div>
-              
-              <h3>📋 Lista de Contactos</h3>
-              <table>
-                <thead>
-                  <tr><th>Nombre</th><th>Teléfono</th><th>Prefijo</th></tr>
-                </thead>
-                <tbody>
-                  ${contactsList || '<tr><td colspan="3" style="text-align:center">No hay contactos aún</td></tr>'}
-                </tbody>
-              </table>
-              
-              <p class="date">📅 Última actualización: ${currentDate.toLocaleString('es-ES')}</p>
-              
-              <hr style="margin: 20px 0">
-              
-              <div class="endpoints">
-                <strong>🔗 Endpoints disponibles:</strong><br>
-                <code>GET</code> /api/persons - Listar todos los contactos<br>
-                <code>GET</code> /api/persons/:id - Obtener contacto específico<br>
-                <code>POST</code> /api/persons - Crear nuevo contacto<br>
-                <code>PUT</code> /api/persons/:id - Actualizar contacto completo<br>
-                <code>PATCH</code> /api/persons/:id - Actualizar número únicamente<br>
-                <code>DELETE</code> /api/persons/:id - Eliminar contacto<br>
-              </div>
+          <div class="card">
+            <h1>📞 Agenda Telefónica</h1>
+            <div class="info">
+              <p>📊 Total de contactos: <strong>${count}</strong></p>
+              <p>🟢 Estado: <span class="badge">En línea</span></p>
             </div>
+            <p>📅 Fecha y hora del servidor: ${new Date().toLocaleString('es-ES')}</p>
+            <hr>
+            <small>🔗 Formato requerido: +34 654 827 120</small>
           </div>
         </body>
       </html>
@@ -411,7 +275,7 @@ app.get('/info', async (req, res, next) => {
   }
 })
 
-// GET - Buscar contactos por nombre o número
+// BUSCAR CONTACTOS
 app.get('/api/persons/search/:query', async (req, res, next) => {
   try {
     const query = req.params.query
@@ -433,9 +297,9 @@ app.get('/api/persons/search/:query', async (req, res, next) => {
 // Middleware para rutas no encontradas
 const unknownEndpoint = (req, res) => {
   res.status(404).json({ 
-    error: 'Unknown endpoint',
-    message: `The endpoint ${req.method} ${req.path} does not exist`,
-    availableEndpoints: [
+    error: 'Endpoint no encontrado',
+    message: `El endpoint ${req.method} ${req.path} no existe`,
+    endpointsDisponibles: [
       'GET /api/persons',
       'GET /api/persons/:id',
       'POST /api/persons',
@@ -455,54 +319,49 @@ const errorHandler = (error, req, res, next) => {
   
   if (error.name === 'CastError') {
     return res.status(400).json({ 
-      error: 'Malformatted ID',
-      message: 'The provided ID is not a valid MongoDB ObjectId'
+      error: 'ID inválido',
+      message: 'El ID proporcionado no es válido'
     })
   }
   
   if (error.name === 'ValidationError') {
     return res.status(400).json({ 
-      error: 'Validation Error',
-      message: error.message,
-      fields: Object.keys(error.errors)
+      error: 'Error de validación',
+      message: error.message
     })
   }
   
   if (error.name === 'MongoServerError' && error.code === 11000) {
     return res.status(400).json({ 
-      error: 'Duplicate Key Error',
-      message: 'A person with this name already exists in the database'
+      error: 'Error de duplicado',
+      message: 'Ya existe una persona con ese nombre en la agenda'
     })
   }
   
   // Error genérico del servidor
-  console.error('💥 Unhandled error:', error)
+  console.error('💥 Error no manejado:', error)
   res.status(500).json({ 
-    error: 'Internal Server Error',
-    message: 'Something went wrong on the server'
+    error: 'Error interno del servidor',
+    message: 'Algo salió mal en el servidor'
   })
 }
 app.use(errorHandler)
 
 // ================= INICIAR SERVIDOR =================
 const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`)
+  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`)
   console.log(`📍 http://localhost:${PORT}`)
-  console.log(`📖 Phonebook Info: http://localhost:${PORT}/info`)
-  console.log(`📞 Formatos de teléfono aceptados:`)
-  console.log(`   • +34 604 902 102`)
-  console.log(`   • +34 604902102`)
-  console.log(`   • 604902102 (asume +34)`)
-  console.log(`   • +44 20 7946 0958 (internacional)`)
+  console.log(`📖 Información de la agenda: http://localhost:${PORT}/info`)
+  console.log('📞 Formato de teléfono requerido: +34 654 827 120')
 })
 
 // Manejo de cierre graceful
 process.on('SIGTERM', () => {
-  console.log('SIGTERM signal received: closing HTTP server')
+  console.log('Señal SIGTERM recibida: cerrando servidor HTTP')
   server.close(() => {
-    console.log('HTTP server closed')
+    console.log('Servidor HTTP cerrado')
     mongoose.connection.close(false, () => {
-      console.log('MongoDB connection closed')
+      console.log('Conexión a MongoDB cerrada')
       process.exit(0)
     })
   })

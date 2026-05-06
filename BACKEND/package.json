@@ -11,6 +11,7 @@
     "deploy:full": "npm run build:ui && git add . && git commit -m uibuild && git push",
     "start": "node index.js",
     "dev": "nodemon index.js",
+    "lint": "eslint .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
@@ -22,6 +23,10 @@
     "morgan": "^1.10.1"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "eslint": "^10.3.0",
+    "globals": "^17.6.0",
     "nodemon": "^3.1.14"
   }
 }

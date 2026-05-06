@@ -1,14 +1,606 @@
-<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>part2-c</title>
-    <script type="module" crossorigin src="/assets/index-BPWzxR7d.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-DouvENHA.css">
-  </head>
-  <body>
-    <div id="root"></div>
-  </body>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>World of Warcraft - Agenda Telefónica de Azeroth</title>
+    <style>
+        /* ============================================
+           WORLD OF WARCRAFT - PHONEBOOK UI
+           Diseño Épico y Temático
+        ============================================ */
+        
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=MedievalSharp&display=swap');
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            user-select: none; /* Evita selección de texto (estilo juego) */
+        }
+
+        body {
+            font-family: 'Cinzel', serif;
+            background: radial-gradient(ellipse at center, #1a0f0a 0%, #0a0605 100%);
+            min-height: 100vh;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+            cursor: default;
+        }
+
+        /* ===== EFECTO DE PIEL DE DRAGÓN (FONDO) ===== */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" opacity="0.08"><path fill="%238B4513" d="M20,20 L180,20 L190,40 L180,60 L20,60 L10,40 Z M40,80 L160,80 L170,100 L160,120 L40,120 L30,100 Z M20,140 L180,140 L190,160 L180,180 L20,180 L10,160 Z"/><circle cx="100" cy="100" r="15" fill="%23654321"/><circle cx="60" cy="50" r="8"/><circle cx="140" cy="50" r="8"/><circle cx="60" cy="150" r="8"/><circle cx="140" cy="150" r="8"/></svg>');
+            background-repeat: repeat;
+            pointer-events: none;
+            z-index: 0;
+            animation: slowMove 60s linear infinite;
+        }
+
+        @keyframes slowMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 200px 200px; }
+        }
+
+        /* ===== EFECTO DE VIÑETA OSCURA ===== */
+        body::after {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            box-shadow: inset 0 0 150px rgba(0,0,0,0.8), inset 0 0 50px rgba(0,0,0,0.6);
+            pointer-events: none;
+            z-index: 1;
+        }
+
+        .container {
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        /* ===== MARCO PEDREGOSO CON BRILLO ===== */
+        .card {
+            background: linear-gradient(145deg, rgba(25, 20, 15, 0.92) 0%, rgba(15, 12, 8, 0.95) 100%);
+            border-radius: 24px;
+            padding: 35px;
+            margin-bottom: 30px;
+            border: 2px solid #b8860b;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,215,0,0.3), 0 0 0 4px #2c1a10, inset 0 0 0 2px #5a3a28;
+            position: relative;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 25px 50px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,215,0,0.4);
+            border-color: #ffd700;
+        }
+
+        /* ===== ESQUINAS CON ESPADAS ===== */
+        .card::before,
+        .card::after {
+            content: '⚔️';
+            position: absolute;
+            font-size: 40px;
+            opacity: 0.4;
+            filter: drop-shadow(0 0 4px gold);
+            text-shadow: 0 0 5px orange;
+        }
+        .card::before { top: -20px; left: -20px; transform: rotate(-45deg); }
+        .card::after { bottom: -20px; right: -20px; transform: rotate(135deg); }
+
+        /* ===== TÍTULO PRINCIPAL (EFECTO RUNAS) ===== */
+        h1 {
+            text-align: center;
+            font-family: 'MedievalSharp', cursive;
+            font-size: 3.8em;
+            background: linear-gradient(135deg, #ffd700 0%, #ff8c00 25%, #ffd700 50%, #ffa500 75%, #ffd700 100%);
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 15px rgba(255,215,0,0.6);
+            margin-bottom: 20px;
+            letter-spacing: 4px;
+            animation: shine 5s linear infinite, glowPulse 2s ease-in-out infinite;
+        }
+
+        @keyframes shine {
+            0% { background-position: 0% center; }
+            100% { background-position: 200% center; }
+        }
+        @keyframes glowPulse {
+            0%, 100% { text-shadow: 0 0 10px rgba(255,215,0,0.5); }
+            50% { text-shadow: 0 0 30px rgba(255,215,0,0.9); }
+        }
+
+        /* ===== SUBTÍTULOS ===== */
+        h2 {
+            color: #ffd700;
+            font-size: 2em;
+            margin-bottom: 25px;
+            font-family: 'Cinzel', serif;
+            text-shadow: 3px 3px 0 #3a1f00;
+            border-left: 6px solid #ffd700;
+            padding-left: 20px;
+            position: relative;
+            display: inline-block;
+        }
+        h2::after {
+            content: '';
+            position: absolute;
+            bottom: -5px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(90deg, #ffd700, transparent);
+        }
+
+        /* ===== FORMULARIO ===== */
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 10px;
+            color: #ffd700;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-size: 0.9em;
+            text-shadow: 2px 2px 0 #3a1f00;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 14px;
+            background: rgba(0, 0, 0, 0.75);
+            border: 2px solid #b8860b;
+            border-radius: 12px;
+            color: #ffecb3;
+            font-family: 'Cinzel', monospace;
+            font-size: 16px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(2px);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: #ffd700;
+            box-shadow: 0 0 12px rgba(255,215,0,0.5);
+            background: rgba(0, 0, 0, 0.85);
+            transform: scale(1.01);
+        }
+
+        input::placeholder {
+            color: #8b7355;
+            font-style: italic;
+        }
+
+        .phone-input-group {
+            display: flex;
+            gap: 12px;
+        }
+        .phone-input-group select { width: 130px; }
+
+        /* ===== BOTONES (ESTILO WOW) ===== */
+        button {
+            background: linear-gradient(135deg, #8b5a2b 0%, #5c3a1a 100%);
+            color: #ffd700;
+            border: 1px solid #ffd700;
+            padding: 14px 28px;
+            border-radius: 40px;
+            font-size: 1.2em;
+            font-weight: bold;
+            font-family: 'Cinzel', serif;
+            cursor: pointer;
+            width: 100%;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+        }
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,215,0,0.4), transparent);
+            transition: 0.5s;
+        }
+        button:hover::before { left: 100%; }
+        button:hover {
+            transform: translateY(-3px);
+            background: linear-gradient(135deg, #a56e3a 0%, #6e4620 100%);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            border-color: #ffea80;
+            letter-spacing: 3px;
+        }
+        button:active { transform: translateY(1px); }
+
+        /* ===== VISTA PREVIA ===== */
+        .preview {
+            margin-top: 25px;
+            padding: 18px;
+            background: rgba(0,0,0,0.6);
+            border-radius: 20px;
+            text-align: center;
+            border: 1px solid #ffd700;
+            backdrop-filter: blur(5px);
+            animation: fadeInUp 0.4s ease;
+        }
+        .preview code {
+            font-size: 1.5em;
+            font-weight: bold;
+            color: #ffd700;
+            font-family: 'Cinzel', monospace;
+            background: #1f140c;
+            padding: 8px 15px;
+            border-radius: 30px;
+            display: inline-block;
+            letter-spacing: 2px;
+        }
+
+        /* ===== MENSAJES FLOTANTES ===== */
+        .message {
+            padding: 15px;
+            border-radius: 50px;
+            margin-bottom: 25px;
+            display: none;
+            font-weight: bold;
+            text-align: center;
+            animation: slideDown 0.4s ease-out;
+            font-size: 1em;
+            backdrop-filter: blur(4px);
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .message.success {
+            background: rgba(0, 100, 0, 0.9);
+            color: #b3ffb3;
+            border: 1px solid #00ff00;
+            text-shadow: 0 0 3px darkgreen;
+        }
+        .message.error {
+            background: rgba(100, 0, 0, 0.95);
+            color: #ffaeae;
+            border: 1px solid #ff4444;
+        }
+
+        /* ===== LISTA DE CONTACTOS ÉPICA ===== */
+        .contacts-list {
+            margin-top: 25px;
+            max-height: 600px;
+            overflow-y: auto;
+            padding-right: 8px;
+        }
+        .contacts-list::-webkit-scrollbar {
+            width: 12px;
+        }
+        .contacts-list::-webkit-scrollbar-track {
+            background: #2a1a10;
+            border-radius: 20px;
+        }
+        .contacts-list::-webkit-scrollbar-thumb {
+            background: #b8860b;
+            border-radius: 20px;
+            border: 1px solid #ffd700;
+        }
+
+        .contact-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 18px;
+            margin-bottom: 15px;
+            background: linear-gradient(95deg, rgba(0,0,0,0.7) 0%, rgba(40,25,15,0.7) 100%);
+            border: 1px solid #8b5a2b;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            animation: fadeInRight 0.5s ease;
+            backdrop-filter: blur(2px);
+        }
+        @keyframes fadeInRight {
+            from { opacity: 0; transform: translateX(-30px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .contact-item:hover {
+            background: linear-gradient(95deg, rgba(20,15,5,0.85) 0%, rgba(70,45,20,0.85) 100%);
+            border-color: #ffd700;
+            transform: scale(1.01) translateX(6px);
+            box-shadow: 0 4px 12px rgba(255,215,0,0.3);
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+        .contact-name {
+            font-weight: bold;
+            color: #ffea80;
+            font-size: 1.3em;
+            text-shadow: 2px 2px 0 #4a2a10;
+            letter-spacing: 1px;
+        }
+        .contact-number {
+            color: #d9a13b;
+            font-size: 1em;
+            font-family: monospace;
+            margin-top: 8px;
+            word-break: break-all;
+        }
+        .delete-btn {
+            background: linear-gradient(135deg, #8b3a2a 0%, #5c1a10 100%);
+            padding: 8px 20px;
+            width: auto;
+            font-size: 0.9em;
+            border-radius: 40px;
+            margin-left: 20px;
+            border-color: #ff8866;
+        }
+        .delete-btn:hover {
+            background: linear-gradient(135deg, #a54530 0%, #742818 100%);
+            transform: scale(1.02);
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #ffd966;
+            font-size: 1.3em;
+            text-shadow: 1px 1px 0 #2a1a0a;
+            animation: pulseText 1.8s infinite;
+        }
+        @keyframes pulseText {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; text-shadow: 0 0 8px gold; }
+        }
+
+        small {
+            display: block;
+            margin-top: 12px;
+            color: #c99a3b;
+            font-size: 0.75em;
+            text-align: center;
+            font-style: italic;
+        }
+
+        hr {
+            border: none;
+            height: 2px;
+            background: radial-gradient(circle, #ffd700, transparent);
+            margin: 25px 0;
+        }
+
+        /* ===== ICONOS Y ANIMACIONES EXTRA ===== */
+        .wow-icon {
+            display: inline-block;
+            margin: 0 6px;
+            filter: drop-shadow(0 0 3px gold);
+            animation: iconFloat 2s infinite;
+        }
+        @keyframes iconFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-3px); }
+        }
+
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(15px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 680px) {
+            .card { padding: 20px; }
+            h1 { font-size: 2.5em; }
+            h2 { font-size: 1.6em; }
+            .contact-name { font-size: 1.1em; }
+            .phone-input-group { flex-direction: column; }
+            .phone-input-group select { width: 100%; }
+            .delete-btn { padding: 6px 15px; font-size: 0.8em; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="card">
+        <h1>
+            <span class="wow-icon">🛡️</span>
+            GRIMORIO TELEFÓNICO
+            <span class="wow-icon">⚔️</span>
+        </h1>
+        <div id="message" class="message"></div>
+
+        <h2>📜 NUEVO VÍNCULO ÉPICO</h2>
+        <form id="phoneForm">
+            <div class="form-group">
+                <label>👤 NOMBRE DEL HÉROE</label>
+                <input type="text" id="name" placeholder="Ej: Thrall, Jaina Proudmoore, Illidan" autocomplete="off">
+            </div>
+            <div class="form-group">
+                <label>📞 CONJURO DE COMUNICACIÓN</label>
+                <div class="phone-input-group">
+                    <select id="prefix">
+                        <option value="+34">🇪🇸 +34 (Azeroth)</option>
+                        <option value="+1">🇺🇸 +1 (Lordaeron)</option>
+                        <option value="+44">🇬🇧 +44 (Stormwind)</option>
+                        <option value="+33">🇫🇷 +33 (Gilneas)</option>
+                        <option value="+49">🇩🇪 +49 (Ironforge)</option>
+                        <option value="+351">🇵🇹 +351 (Dalaran)</option>
+                        <option value="+39">🇮🇹 +39 (Silvermoon)</option>
+                    </select>
+                    <input type="tel" id="number" placeholder="654 827 120" autocomplete="off">
+                </div>
+                <small>🔮 9 dígitos mágicos (se agruparán en tríos)</small>
+            </div>
+            <button type="submit">✨ FORJAR ALIANZA ✨</button>
+        </form>
+
+        <div id="preview" class="preview" style="display: none;">
+            <strong>🔍 VISTA PREVIA DEL CONJURO</strong><br>
+            <code id="previewNumber"></code>
+        </div>
+    </div>
+
+    <div class="card">
+        <h2>🏆 CÓDICE DE HÉROES</h2>
+        <div id="contactsList">
+            <div class="loading">
+                <span class="wow-icon">🌀</span> Cargando hermandad... <span class="wow-icon">🌀</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const API_URL = '/api/persons';
+
+    function formatPhoneNumber(input) {
+        let digits = input.replace(/\D/g, '');
+        digits = digits.slice(0, 9);
+        let groups = [];
+        for (let i = 0; i < digits.length; i += 3) groups.push(digits.slice(i, i+3));
+        return groups.join(' ');
+    }
+
+    function showMessage(text, type) {
+        const msgDiv = document.getElementById('message');
+        msgDiv.textContent = text;
+        msgDiv.className = `message ${type}`;
+        setTimeout(() => {
+            msgDiv.style.display = 'none';
+            msgDiv.className = 'message';
+        }, 3200);
+    }
+
+    async function loadContacts() {
+        try {
+            const res = await fetch(API_URL);
+            const contacts = await res.json();
+            const container = document.getElementById('contactsList');
+            if (!contacts.length) {
+                container.innerHTML = '<div class="loading">📭 Sin alianzas aún. ¡Sé el primero en forjar un vínculo!</div>';
+                return;
+            }
+            container.innerHTML = contacts.map(c => `
+                <div class="contact-item">
+                    <div class="contact-info">
+                        <div class="contact-name">⚔️ ${escapeHtml(c.name)}</div>
+                        <div class="contact-number">📞 ${escapeHtml(c.number)}</div>
+                    </div>
+                    <button class="delete-btn" onclick="deleteContact('${c.id}')">🗡️ DISOLVER</button>
+                </div>
+            `).join('');
+        } catch (err) {
+            document.getElementById('contactsList').innerHTML = '<div class="loading">❌ Error de conexión con el Reino</div>';
+        }
+    }
+
+    async function deleteContact(id) {
+        if (!confirm('¿Romper este vínculo heroico?')) return;
+        try {
+            const res = await fetch(`${API_URL}/${id}`, { method: 'DELETE' });
+            if (res.ok) {
+                showMessage('✅ Alianza disuelta...', 'success');
+                loadContacts();
+            } else showMessage('❌ No se pudo disolver', 'error');
+        } catch {
+            showMessage('❌ Error de conexión', 'error');
+        }
+    }
+
+    function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // FORMULARIO
+    const form = document.getElementById('phoneForm');
+    const nameInput = document.getElementById('name');
+    const numberInput = document.getElementById('number');
+    const prefixSelect = document.getElementById('prefix');
+    const previewDiv = document.getElementById('preview');
+    const previewSpan = document.getElementById('previewNumber');
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const name = nameInput.value.trim();
+        const prefix = prefixSelect.value;
+        let rawNumber = numberInput.value.trim();
+        if (!name || !rawNumber) {
+            showMessage('❌ ¡Completa todos los campos, aventurero!', 'error');
+            return;
+        }
+        const digitsOnly = rawNumber.replace(/\s/g, '');
+        if (digitsOnly.length !== 9) {
+            showMessage('❌ El número debe tener 9 dígitos exactos', 'error');
+            return;
+        }
+        const finalNum = `${prefix} ${formatPhoneNumber(digitsOnly)}`;
+        const payload = { name, number: finalNum, countryCode: prefix };
+        try {
+            const res = await fetch(API_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                showMessage(`✅ ¡${name} se une a la hermandad!`, 'success');
+                nameInput.value = '';
+                numberInput.value = '';
+                previewDiv.style.display = 'none';
+                loadContacts();
+            } else {
+                const errData = await res.json();
+                showMessage(`❌ Error: ${errData.error || 'No se pudo forjar la alianza'}`, 'error');
+            }
+        } catch {
+            showMessage('❌ Error de conexión con el Consejo', 'error');
+        }
+    });
+
+    numberInput.addEventListener('input', (e) => {
+        let val = e.target.value;
+        let formatted = formatPhoneNumber(val);
+        numberInput.value = formatted;
+        const clean = formatted.replace(/\s/g, '');
+        if (clean.length > 0) {
+            const prefix = prefixSelect.value;
+            previewSpan.innerText = `${prefix} ${formatted || 'XXX XXX XXX'}`;
+            previewDiv.style.display = 'block';
+            if (clean.length === 9) previewSpan.style.color = '#aaffaa';
+            else previewSpan.style.color = '#ffd700';
+        } else previewDiv.style.display = 'none';
+    });
+
+    prefixSelect.addEventListener('change', () => {
+        const currNum = numberInput.value;
+        if (currNum) {
+            previewSpan.innerText = `${prefixSelect.value} ${currNum || 'XXX XXX XXX'}`;
+            previewDiv.style.display = 'block';
+        }
+    });
+
+    loadContacts();
+</script>
+</body>
 </html>
